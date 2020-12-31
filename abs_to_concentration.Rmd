@@ -1,0 +1,239 @@
+---
+title: "absorbance_to_concentration"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/HalfSib/scripts")
+rpt<-function(mod,id.col)
+{
+  ms<-summary(mod)[[1]]$Mean
+  ns<-table(id.col)
+  a<-length(unique(id.col))
+  n0<-(1/(a-1))*(sum(ns)-(sum(ns^2)/sum(ns)))
+  s2<-ms[2]
+  sa2<-(ms[1]-ms[2])/n0
+  rr<-sa2/(s2+sa2)
+  return(rr)
+}
+
+combined<-read.table("../processed_data/wholebodies_combined_dataset.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+```
+
+
+```{r}
+#separate dam, treatment and replicate column
+
+test<-combined %>% separate(Well.ID, c("DAM", "Treat", "rep"))
+testy<-cbind(combined$Well.ID, test)
+testy$Well.ID<-combined$Well.ID
+test_A<-testy[,-1]
+combined<-test_A
+
+write.table(combined, "../processed_data/combined_wDamTxRep.txt", sep="\t")
+```
+
+clear working directory
+```{r}
+combined<-read.table("../processed_data/combined_wDamTxRep.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+which(combined$Treat=="Dr") # 5 (130 , 488,  689, 1090, 1424,)
+combined$Treat[combined$Treat=="Dr"] <- "DR"
+combined$Well.ID[combined$Well.ID=="160.Dr.B1"] <- "160.DR.B1"
+combined$Well.ID[combined$Well.ID=="131.Dr.B1"] <- "131.DR.B1"
+combined$Well.ID[combined$Well.ID=="172.Dr.A1"] <- "172.DR.A1"
+which(combined$Treat=="Dr") #0
+
+which(combined$Treat=="hs") # 2 (380,1228)
+combined$Treat[combined$Treat=="hs"] <- "HS"
+combined$Well.ID[combined$Well.ID=="143.hs.c1"] <- "143.HS.C1"
+which(combined$Treat=="hs") # 0
+
+which(combined$rep=="c1") # 2 (380, 1228)
+combined$rep[combined$rep=="c1"] <- "C1"
+combined$Well.ID[combined$Well.ID=="143.HS.C1"] <- "143.HS.C1"
+
+which(combined$rep=="b2") # 1 (1152)
+combined$rep[combined$rep=="b2"] <- "B2"
+combined$Well.ID[combined$Well.ID=="96.DR.b2"] <- "96.DR.B2"
+which(combined$rep=="b2") # 0
+
+which(combined$Treat=="CA2") # 3 
+combined$rep[combined$Well.ID=="118.CA2"] <- "A2"
+combined$Treat[combined$Treat=="CA2"] <- "C"
+combined$Well.ID[combined$Well.ID=="118.CA2"] <- "118.C.A2"
+
+# 118.CA2, 160.Dr.B1, 131.Dr.B1, 172.Dr.A1, 143.hs.c1 96.DR.b2, 143.HS.C1 (c1)
+
+write.table(combined, "../processed_data/combined_wDamTxRep.txt", sep="\t")
+
+```
+
+
+```{r}
+combined<-read.table("../processed_data/combined_wDamTxRep.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mod_lip<-aov(combined$Abs_lip~combined$Well.ID)
+lip_rpt<-rpt(mod_lip,combined$Well.ID)
+lip_rpt #83
+
+l_std<-read.table("../processed_data/AR_lip_SC.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+lip<-data.frame("amount"=numeric(length=0), "DAM"=numeric(length=0), "Treat"=character(length=0),"Well.ID"=character(length=0),"rep"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(combined$PLATE))
+{
+  std.p<-subset(l_std, PLATE== plateid)
+  star<-lm(Abs~amount, data=l_std)
+  plate.s<-subset(combined,PLATE== plateid)
+  smplamt<-(plate.s$Abs_lip-star$coefficients[1])/star$coefficients[2]
+  lip.s<-data.frame("amount"=smplamt, "DAM"=plate.s$DAM, "Treat"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, "Well.ID"=plate.s$Well.ID,"rep"=plate.s$rep, stringsAsFactors=FALSE)
+  lip<-rbind(lip, lip.s)
+}
+
+#calculate amount per fly.
+lip$l_perfly<-(lip$amount*(150/1000))/(lip$flies)
+write.table(lip, "../processed_data/lipAR_processed.txt", sep="\t")
+```
+
+```{r cars}
+p_std<-read.table("../processed_data/AR_prot_SC.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mod_prot<-aov(combined$Abs_prot~combined$Well.ID)
+prot_rpt<-rpt(mod_prot,combined$Well.ID)
+prot_rpt #37
+
+#prot
+prot<-data.frame("amount"=numeric(length=0), "DAM"=numeric(length=0), "Treat"=character(length=0),"Well.ID"=character(length=0),"rep"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(combined$PLATE))
+{
+  std.p<-subset(p_std, PLATE== plateid)
+  star<-lm(Abs~amount, data=p_std)
+  plate.s<-subset(combined,PLATE== plateid)
+  smplamt<-(plate.s$Abs_prot-star$coefficients[1])/star$coefficients[2]
+  prot.s<-data.frame("amount"=smplamt, "DAM"=plate.s$DAM, "Treat"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, "Well.ID"=plate.s$Well.ID,"rep"=plate.s$rep, stringsAsFactors=FALSE)
+  prot<-rbind(prot, prot.s)
+}
+
+#calculate amount per fly.
+prot$p_perfly<-(prot$amount*(150/1000))/(prot$flies)
+
+write.table(prot, "../processed_data/protAR_processed.txt", sep="\t")
+```
+
+
+#carbohydrates
+```{r cars}
+mod_carb<-aov(combined$Abs_carb~combined$Well.ID)
+carb_rpt<-rpt(mod_carb,combined$Well.ID)
+carb_rpt #94.6
+
+c_std<-read.table("../processed_data/AR_carb_SC.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#carb
+carb<-data.frame("amount"=numeric(length=0), "DAM"=numeric(length=0), "Treat"=character(length=0),"Well.ID"=character(length=0),"rep"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(combined$PLATE))
+{
+  std.p<-subset(c_std, PLATE== plateid)
+  star<-lm(Abs~amount, data=c_std)
+  plate.s<-subset(combined,PLATE== plateid)
+  smplamt<-(plate.s$Abs_carb-star$coefficients[1])/star$coefficients[2]
+  carb.s<-data.frame("amount"=smplamt, "DAM"=plate.s$DAM, "Treat"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, "Well.ID"=plate.s$Well.ID,"rep"=plate.s$rep, stringsAsFactors=FALSE)
+  carb<-rbind(carb, carb.s)
+}
+#calculate amount per fly.
+carb$c_perfly<-(carb$amount*(150/1000))/(carb$flies)
+
+write.table(carb, "../processed_data/carbAR_processed.txt", sep="\t")
+```
+
+
+#glycogen
+```{r cars}
+
+mod_gly<-aov(combined$Abs_gly~combined$Well.ID)
+gly_rpt<-rpt(mod_gly,combined$Well.ID)
+gly_rpt #93.6
+
+
+g_std<-read.table("../processed_data/AR_gly_SC.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#GLYCOGEN
+glycogen<-data.frame("amount"=numeric(length=0), "DAM"=numeric(length=0), "Treat"=character(length=0),"Well.ID"=character(length=0),"rep"=character(length=0), "plate"=character(length=0), "flies"=character(length=0), stringsAsFactors=FALSE)
+
+for (plateid in unique(combined$PLATE))
+{
+  std.g<-subset(g_std, PLATE== plateid)
+  star<-lm(Abs~amount, data=g_std)
+  plate.s<-subset(combined,PLATE== plateid)
+  smplamt<-(plate.s$Abs_gly-star$coefficients[1])/star$coefficients[2]
+  glycogen.s<-data.frame("amount"=smplamt, "DAM"=plate.s$DAM, "Treat"=plate.s$Treat, "plate"=plate.s$PLATE, "flies"=plate.s$FLIES, "Well.ID"=plate.s$Well.ID,"rep"=plate.s$rep, stringsAsFactors=FALSE)
+  glycogen<-rbind(glycogen, glycogen.s)
+}
+
+#calculate amount per fly.
+glycogen$g_perfly<-(glycogen$amount*(150/1000))/(glycogen$flies)
+
+write.table(glycogen, "../processed_data/glyAR_processed.txt", sep="\t")
+```
+
+```{r}
+gly<-read.table("../processed_data/glyAR_processed.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+carb<-read.table("../processed_data/carbAR_processed.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../processed_data/lipAR_processed.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../processed_data/protAR_processed.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+prot$amount<-NULL
+prot$DAM<-NULL
+prot$Treat<-NULL
+prot$rep<-NULL
+prot$flies<-NULL
+
+
+lip$amount<-NULL
+lip$DAM<-NULL
+lip$Treat<-NULL
+lip$rep<-NULL
+lip$flies<-NULL
+
+gly$amount<-NULL
+gly$DAM<-NULL
+gly$Treat<-NULL
+gly$rep<-NULL
+gly$flies<-NULL
+
+carb$amount<-NULL
+carb$DAM<-NULL
+carb$Treat<-NULL
+carb$rep<-NULL
+carb$flies<-NULL
+
+test1 <-cbind(lip, prot)
+test2 <-cbind(test1,gly)
+test3 <-cbind(test2,carb)
+
+combined_processed <- test3[ -c(4,5,7,8,10,11) ] #remove repeat rows of plate & Well.ID
+
+test<-combined_processed %>% separate(Well.ID, c("DAM", "Treat", "rep"))
+testy<-cbind(combined_processed$Well.ID, test)
+testy$Well.ID<-combined_processed$Well.ID
+test_A<-testy[,-1]
+combined_processed<-test_A
+
+which(combined_processed$Treat=="Dr") 
+which(combined_processed$Treat=="hs")
+
+write.table(combined_processed, "../processed_data/combined_processed.txt", sep="\t")
+```
+

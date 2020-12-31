@@ -1,0 +1,324 @@
+---
+title: "glycogen_animal_model"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MCMCglmm)
+library(rethinking)
+library(tidyverse)
+library(cowplot)
+
+source("color_map.R")
+source("ggplot_theme.R")
+```
+
+# Heritability
+
+```{r eval=TRUE}
+set.seed(37264)
+
+iter <- 2e6
+burnin <- 15000
+rerun_MCMC <- FALSE
+
+h2life <- read.table("../processed_data/glydat_formatted.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#h2_filtered <- h2life[h2life$status!=3, ] # remove censored events
+h2_filtered<-h2life
+h2_filtered$animal <- seq(1, nrow(h2_filtered))
+h2_filtered$treat <- as.factor(h2_filtered$treat)
+
+```
+
+
+```{r}
+HS <- subset(h2_filtered, treat == "HS")
+
+HS$newS<-c("S")
+HS$newD<-c("D")
+HS$sire <- paste(HS$newS,HS$sireid)
+HS$dam <- paste(HS$newD,HS$damid)
+
+pedigree <- HS[, c("animal", "sire", "dam")]
+#names(pedigree) <- c("animal", "sire", "dam")
+
+
+sires <- data.frame(animal = unique(pedigree$sire),
+                    sire = NA, dam = NA, stringsAsFactors = FALSE)
+dams <- data.frame(animal = unique(pedigree$dam),
+                   sire = NA, dam = NA, stringsAsFactors = FALSE)
+pedigree$animal <- as.character(pedigree$animal)
+pedigree$dam <- as.character(pedigree$dam)
+pedigree$sire <- as.character(pedigree$sire)
+
+
+pedigree <- bind_rows(sires, dams, pedigree) %>% as.data.frame()
+```
+
+```{r}
+prior <- list(R = list(V = 1, nu = 0.002),
+              G = list(G1 = list(V = 1, nu = 0.002)))
+
+if (rerun_MCMC) {
+  model <- MCMCglmm(amt_gly ~ 1,
+                    random = ~ animal,
+                    family = "gaussian",
+                    prior = prior,
+                    pedigree = pedigree,
+                    data = HS,
+                    nitt = iter,
+                    burnin = burnin,
+                    thin = 50,
+                    verbose = TRUE)
+  save(model, file = "../processed_data/HS_glyenbud.Rda")
+}
+```
+
+missing_columns <- data2 %>% select(which(!(colnames(data2) %in% colnames(data1))))
+https://community.rstudio.com/t/compare-two-data-sets/15325/4
+#model not saving
+
+```{r}
+load("../processed_data/HS_glyenbud.Rda")
+######stuck here
+# Fixed
+plot(model$Sol)
+autocorr.diag(model$Sol)
+effectiveSize(model$Sol)
+
+# Random
+plot(model$VCV)
+autocorr.diag(model$VCV)
+effectiveSize(model$VCV)
+
+summary(model)
+
+herit <- model$VCV[, "animal"] / (model$VCV[, "animal"] + model$VCV[, "units"])
+plot(herit)
+median(herit)
+f <- HPDinterval(herit)
+k <- as.data.frame(f)
+```
+
+
+```{r}
+density(herit)
+
+hs.samp <- data.frame(('h2' = herit))
+
+ggplot(hs.samp, aes(x = var1), y = k) +
+  geom_histogram() +
+  geom_vline(xintercept = median(herit))
+
+rm(model) 
+```
+
+## Dietary restriction
+
+```{r}
+DR <- subset(h2_filtered, treat == "DR")
+
+DR$newS<-c("S")
+DR$newD<-c("D")
+DR$sire <- paste(DR$newS,DR$sireid)
+DR$dam <- paste(DR$newD,DR$damid)
+
+pedigree <- DR[, c("animal", "sire", "dam")]
+#names(pedigree) <- c("animal", "sire", "dam")
+
+
+sires <- data.frame(animal = unique(pedigree$sire),
+                    sire = NA, dam = NA, stringsAsFactors = FALSE)
+dams <- data.frame(animal = unique(pedigree$dam),
+                   sire = NA, dam = NA, stringsAsFactors = FALSE)
+pedigree$animal <- as.character(pedigree$animal)
+pedigree$dam <- as.character(pedigree$dam)
+pedigree$sire <- as.character(pedigree$sire)
+
+
+pedigree <- bind_rows(sires, dams, pedigree) %>% as.data.frame()
+```
+
+
+```{r}
+prior <- list(R = list(V = 1, nu = 0.002),
+              G = list(G1 = list(V = 1, nu = 0.002)))
+
+if (rerun_MCMC) {
+  model <- MCMCglmm(amt_gly ~ 1,
+                    random = ~ animal,
+                    family = "gaussian",
+                    prior = prior,
+                    pedigree = pedigree,
+                    data = DR,
+                    nitt = iter,
+                    burnin = burnin,
+                    thin = 50,
+                    verbose = TRUE)
+  
+  save(model, file = "../processed_data/DR_glyenbud.Rda")
+}
+```
+
+
+```{r}
+load("../processed_data/DR_glyenbud.Rda")
+
+# Fixed
+plot(model$Sol)
+autocorr.diag(model$Sol)
+effectiveSize(model$Sol)
+
+# Random
+plot(model$VCV)
+autocorr.diag(model$VCV)
+effectiveSize(model$VCV)
+
+summary(model)
+
+herit.dr <- model$VCV[, "animal"] / (model$VCV[, "animal"] + model$VCV[, "units"])
+plot(herit.dr)
+median(herit.dr)
+HPDinterval(herit.dr)
+```
+
+```{r}
+density(herit.dr)
+
+dr.samp<-data.frame(('h2' = herit.dr))
+
+ggplot(dr.samp, aes(x = var1), y = k) +
+  geom_histogram() +
+  geom_vline(xintercept = median(herit.dr))
+
+rm(model)
+```
+
+## Standard, C
+
+```{r}
+STD <- subset(h2_filtered, treat == "C")
+
+STD$newS<-c("S")
+STD$newD<-c("D")
+STD$sire <- paste(STD$newS,STD$sireid)
+STD$dam <- paste(STD$newD,STD$damid)
+
+pedigree <- STD[, c("animal", "sire", "dam")]
+#names(pedigree) <- c("animal", "sire", "dam")
+
+
+sires <- data.frame(animal = unique(pedigree$sire),
+                    sire = NA, dam = NA, stringsAsFactors = FALSE)
+dams <- data.frame(animal = unique(pedigree$dam),
+                   sire = NA, dam = NA, stringsAsFactors = FALSE)
+pedigree$animal <- as.character(pedigree$animal)
+pedigree$dam <- as.character(pedigree$dam)
+pedigree$sire <- as.character(pedigree$sire)
+
+
+pedigree <- bind_rows(sires, dams, pedigree) %>% as.data.frame()
+```
+
+
+
+```{r}
+prior <- list(R = list(V = 1, nu = 0.002),
+              G = list(G1 = list(V = 1, nu = 0.002)))
+
+if (rerun_MCMC) {
+  model <- MCMCglmm(amt_gly ~ 1,
+                    random = ~ animal,
+                    family = "gaussian",
+                    prior = prior,
+                    pedigree = pedigree,
+                    data = STD,
+                    nitt = iter,
+                    burnin = burnin,
+                    thin = 50,
+                    verbose = TRUE)
+  
+  save(model, file = "../processed_data/STD_glyenbud.Rda")
+}
+```
+
+```{r}
+load("../processed_data/STD_glyenbud.Rda")
+
+# Fixed
+plot(model$Sol)
+autocorr.diag(model$Sol)
+effectiveSize(model$Sol)
+
+# Random
+plot(model$VCV)
+autocorr.diag(model$VCV)
+effectiveSize(model$VCV)
+
+summary(model)
+
+herit.c <- model$VCV[, "animal"] / (model$VCV[, "animal"] +
+                                      model$VCV[, "units"])
+plot(herit.c)
+HPDinterval(herit.c)
+median(herit.c)
+p <- HPDinterval(herit.c)
+q <- as.data.frame(f)
+```
+
+# Plot STD with ggplot
+
+```{r}
+density(herit.c)
+
+c.samp<-data.frame(('h2' = herit.c))
+
+ggplot(c.samp, aes(x = var1), y = k) +
+  geom_histogram()+
+  geom_vline(xintercept = median(herit.c))
+```
+
+###START FROM HERE
+# The three files together
+
+```{r, }
+hs.samp$Diet <- "HS"
+dr.samp$Diet <- "DR"
+c.samp$Diet <- "C"
+
+hs.samp$HS <- NULL
+dr.samp$DR <- NULL
+c.samp$C <- NULL
+heritab <- rbind(hs.samp, dr.samp, c.samp)
+save(heritab, file = "../processed_data/herit_glycogen.Rda")
+```
+
+# Pairwise differences
+
+```{r}
+C_DR <- c.samp$var1 - dr.samp$var1
+C_HS <- c.samp$var1 - hs.samp$var1
+HS_DR <- hs.samp$var1 - dr.samp$var1
+
+HPDinterval(as.mcmc(C_DR))
+HPDinterval(as.mcmc(C_HS))
+HPDinterval(as.mcmc(HS_DR))
+```
+
+# Plot treatments together
+
+```{r, dens}
+load("../processed_data/herit_glycogen.Rda")
+
+ggplot(heritab, aes(var1, fill = Diet)) + 
+  geom_density(alpha = 0.2) +
+  xlab("Heritability") +
+  ylab("Density") +
+  theme(legend.position = c(0.85, 0.85)) +
+  tx_fill_map() +
+  my_theme
+glycogen_h2 <- last_plot()
+save(glycogen_h2, file = "../plots/glycogen_h2.Rda")
+```

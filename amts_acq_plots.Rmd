@@ -1,0 +1,209 @@
+---
+title: "amounts_acquired_plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/HalfSib/scripts")
+
+combined<- read.table("../processed_data/perfly_overall_dataset.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+```
+
+```{r}
+combined$Well.ID<-combined$Line
+
+test<-combined %>% separate(Well.ID, c("DAM", "Treat", "rep"))
+testy<-cbind(combined$Well.ID, test)
+testy$Well.ID<-combined$Well.ID
+test_A<-testy[,-1]
+
+whole<-test_A
+###
+sire<-rep(1:72, each=3)
+DAM<-c(1:216)
+
+sire_dam_sets<- cbind(sire,DAM)
+dat_sire <- merge(whole,sire_dam_sets,by="DAM")
+dat_sire$sire <-as.factor(dat_sire$sire)
+dat_sire$DAM <-as.factor(dat_sire$DAM)
+
+#p_avg<- dplyr::summarize(group_by(dat_lip_sire,sire & Treat),p_avg=mean(p_perfly))#
+##############<-dat_lip_sire #dataset to use, includes sire and DAM, rep and TX.
+```
+
+```{r}
+#protien
+dat_sire$sire_tx <- paste(dat_sire$sire,dat_sire$Treat)
+p_avg<- dplyr::summarize(group_by(dat_sire,sire_tx),p_avg=mean(p_perfly, na.rm = TRUE))#
+
+prot_sire<-p_avg %>% separate(sire_tx, c("sire", "Treat"))
+prot_sire_whole<-cbind(p_avg$sire_tx, prot_sire)
+
+ggplot(prot_sire_whole, aes(x=Treat, y=p_avg, color=as.factor(sire))) +
+    xlab("Diet") + ylab("protein (micrograms)") + 
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_point()+
+  geom_line(data=prot_sire_whole, size=.75, aes(x=Treat, y=p_avg, group=sire, color= as.factor(sire)))+
+  theme(legend.position="none")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")+
+  stat_sum_df("mean_cl_normal",geom="errorbar")
+```
+
+```{r}
+#lipid
+dat_sire$sire_tx <- paste(dat_sire$sire,dat_sire$Treat)
+l_avg<- dplyr::summarize(group_by(dat_sire,sire_tx),l_avg=mean(l_perfly, na.rm = TRUE))#
+
+lip_sire<-l_avg %>% separate(sire_tx, c("sire", "Treat"))
+lip_sire_whole<-cbind(l_avg$sire_tx, lip_sire)
+
+ggplot(lip_sire_whole, aes(x=Treat, y=l_avg, color=as.factor(sire))) +
+    xlab("Diet") + ylab("lipid (micrograms)") + 
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_point()+
+  geom_line(data=lip_sire_whole, size=.75, aes(x=Treat, y=l_avg, group=sire, color= as.factor(sire)))+
+  theme(legend.position="none")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")+
+  stat_sum_df("mean_cl_normal",geom="errorbar")
+```
+
+```{r}
+#carbohydrate
+dat_sire$sire_tx <- paste(dat_sire$sire,dat_sire$Treat)
+c_avg<- dplyr::summarize(group_by(dat_sire,sire_tx),c_avg=mean(c_perfly, na.rm = TRUE))#
+
+carb_sire<-c_avg %>% separate(sire_tx, c("sire", "Treat"))
+carb_sire_whole<-cbind(c_avg$sire_tx, carb_sire)
+
+ggplot(carb_sire_whole, aes(x=Treat, y=c_avg, color=as.factor(sire))) +
+    xlab("Diet") + ylab("carbohydrate (micrograms)") + 
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_point()+
+  geom_line(data=carb_sire_whole, size=.75, aes(x=Treat, y=c_avg, group=sire, color= as.factor(sire)))+
+  theme(legend.position="none")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")+
+  stat_sum_df("mean_cl_normal",geom="errorbar")
+
+```
+
+```{r}
+#glycogen
+dat_sire$sire_tx <- paste(dat_sire$sire,dat_sire$Treat)
+g_avg<- dplyr::summarize(group_by(dat_sire,sire_tx),g_avg=mean(g_perfly, na.rm = TRUE))#
+
+gly_sire<-g_avg %>% separate(sire_tx, c("sire", "Treat"))
+gly_sire_whole<-cbind(g_avg$sire_tx, gly_sire)
+
+ggplot(gly_sire_whole, aes(x=Treat, y=g_avg, color=as.factor(sire))) +
+    xlab("Diet") + ylab("glycogen (micrograms)") + 
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_point()+
+  geom_line(data=gly_sire_whole, size=.75, aes(x=Treat, y=g_avg, group=sire, color= as.factor(sire)))+
+  theme(legend.position="none")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")+
+  stat_sum_df("mean_cl_normal",geom="errorbar")
+
+```
+
+```{r}
+# half sib family variation
+ggplot(dat_sire, aes(x=sire, y=l_perfly, color=Treat)) +
+  geom_point() + 
+    xlab("Sire")+ ylab("amount lip")
+
+#whole sib family variation
+ggplot(dat_lip_sire, aes(x=DAM, y=l_perfly, color=Treat)) +
+  geom_point() + 
+    xlab("DAM")+ ylab("amount lip")
+```
+
+
+
+
+other cool visualizations 
+```{r}
+#scatter plot with a box plot for each tx.
+#Sire averages by treatment. HAS THE DIETS arranged by low to hi calorie
+plot_lip<-ggplot(data=dat_lip_sire, aes(x=Treat, y=l_perfly,color=as.factor(Treat))) + geom_boxplot() + geom_point(position = position_jitter(width = 0.2))+ 
+xlab("Diet") + ylab("lip (micrograms)")+
+scale_x_discrete(limits=c("DR","C","HS"))+ theme(legend.position = "none") +
+scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9"))
+#
+plot_lip
+```
+
+dat<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+carbalt<-data.frame('value'=c(dat[,'dr_carb'],dat[,'c_carb'],dat[,'hs_carb']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+hist(carbalt$value)
+carbalt$carb_T<-(carbalt$value^1/2) 
+
+carbalt<- carbalt %>% mutate(treatment=fct_inorder(carbalt$treatment, ordered=NA))
+
+p1a<-ggplot(data=carbalt, aes(x = treatment, y=value, color=as.factor(RIL))) +
+  geom_point()+
+   geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("amount (mg/fly)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color = "black")
+
+```{r}
+
+###lines plots (no points included, just sire lines )
+ggplot(dat_lip_sire, aes(x=Treat, y=l_perfly, group=sire, color= as.factor(sire))) +
+  geom_line(size=.75) + 
+  #stat_summary(fun.y = mean, geom = "point", size = 1, color="red")+
+  xlab("Diet") + ylab("lip(micrograms)") + theme(legend.position="none")+
+  scale_x_discrete(limits=c("DR","C","HS"))
+
+###scatter plot with thicker lines, and jittered visible points. sires connect? 
+# colored by sire, averages given for each diet tx, dr, c, and HS.  
+ggplot(dat_lip_sire, aes(x=Treat, y=l_perfly, group= sire, color=as.factor(sire))) +
+  geom_point(position = position_jitter(width = 0.1)) + 
+  xlab("Diet") + ylab("lip(micrograms)") +
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_line(data=dat_lip_sire, size=.75)
+  #stat_summary(fun.y = mean, geom = "point", size = 3, color="black")
+
+#  BEST. colored by sire, averages given for each diet tx, dr, c, and HS.  
+ggplot(rm_dup, aes(x=Treat, y=l_avg, color=as.factor(sire))) +
+  geom_point(position = position_jitter(width = 0.2), alpha=0.5) + 
+  xlab("Diet") + ylab("lip(micrograms)") +
+scale_x_discrete(limits=c("DR","C","HS")) +
+  geom_line(data=sire_fam, size=.75, aes(x=Treat, y=l_avg, group=sire, color= as.factor(sire)))
+  #stat_summary(fun.y = mean, geom = "point", size = 3, color="black")
+#add alpha and jitter
+
+
+#per family, (not terribly useful)
+ggplot(dat_lip_sire, aes(x=Treat, y=l_perfly, color=as.factor(DAM))) +
+  #geom_point(position = position_jitter(width = 0.2)) + 
+  xlab("Diet") + ylab("lip (micrograms)")+
+  stat_summary(fun.y = mean, geom = "point", size = 3, color="black")+
+  geom_line(data=dat_lip_sire, aes(x=Treat, y=l_perfly, group=as.factor(DAM)))+
+scale_x_discrete(limits=c("DR","C","HS"))
+#add jitter and transparency (?)
+
+
+#more space between x values?
+# half sib family variation
+ggplot(rm_dup, aes(x=sire, y=l_perfly, color=Treat)) +
+  geom_point() + 
+    xlab("Sire")+ ylab("amount lip")
+
+#whole sib family variation
+ggplot(rm_dup, aes(x=DAM, y=l_perfly, color=Treat)) +
+  geom_point() + 
+    xlab("DAM")+ ylab("amount lip")
+
+```

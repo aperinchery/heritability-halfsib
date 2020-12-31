@@ -1,0 +1,495 @@
+---
+title: "Transformations"
+output: html_document
+---
+
+**CARBOHYDRATE:** DR is log; C is log; HS is untransformed
+
+**LIPID:**  DR, C and HS untransformed;
+
+**GLYCOGEN:** DR, C and HS all square root
+
+**PROTEIN:** DR,C and HS is  untransformed
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/HalfSib/scripts")
+
+combined<- read.table("../processed_data/perfly_overall_dataset.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+all_prot<-read.table("../processed_data/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+all_carb<-read.table("../processed_data/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+all_gly<-read.table("../processed_data/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+all_lip<-read.table("../processed_data/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+which(all_lip$hs_lip <0) #1
+all_lip$hs_lip[all_lip$hs_lip<0] <- NA
+write.table(all_lip, "../processed_data/all_lip_tot.txt", sep="\t")
+```
+
+```{r}
+test<-all_carb %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(all_carb$RIL, test)
+testy$RIL<-all_carb$RIL
+test_A<-testy[,-1]
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+sire_dam_sets<- cbind(sireid,damid)
+dat_carb_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_carb_sire$sireid <-as.factor(dat_carb_sire$sireid)
+dat_carb_sire$damid <-as.factor(dat_carb_sire$damid)
+
+c_carb<- dplyr::summarize(group_by(dat_carb_sire,sireid),c_carb_sm=mean(c_carb, na.rm = TRUE))#
+dr_carb<- dplyr::summarize(group_by(dat_carb_sire,sireid),dr_carb_sm=mean(dr_carb, na.rm = TRUE))#
+hs_carb<- dplyr::summarize(group_by(dat_carb_sire,sireid),hs_carb_sm=mean(hs_carb, na.rm = TRUE))#
+
+carb_<-left_join(c_carb, dr_carb, by="sireid")
+all_carb<-left_join(carb_, hs_carb, by="sireid")
+
+names(all_carb)[names(all_carb) == "c_carb_sm"] <- "c_carb"
+names(all_carb)[names(all_carb) == "dr_carb_sm"] <- "dr_carb"
+names(all_carb)[names(all_carb) == "hs_carb_sm"] <- "hs_carb"
+
+write.table(all_carb, "../processed_data/carb_sire_avg.txt", sep="\t")
+```
+
+```{r}
+test<-all_lip %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(all_lip$RIL, test)
+testy$RIL<-all_lip$RIL
+test_A<-testy[,-1]
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+sire_dam_sets<- cbind(sireid,damid)
+dat_lip_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_lip_sire$sireid <-as.factor(dat_lip_sire$sireid)
+dat_lip_sire$damid <-as.factor(dat_lip_sire$damid)
+
+c_lip<- dplyr::summarize(group_by(dat_lip_sire,sireid),c_lip_sm=mean(c_lip, na.rm = TRUE))#
+dr_lip<- dplyr::summarize(group_by(dat_lip_sire,sireid),dr_lip_sm=mean(dr_lip, na.rm = TRUE))#
+hs_lip<- dplyr::summarize(group_by(dat_lip_sire,sireid),hs_lip_sm=mean(hs_lip, na.rm = TRUE))#
+
+lip_<-left_join(c_lip, dr_lip, by="sireid")
+all_lip<-left_join(lip_, hs_lip, by="sireid")
+
+names(all_lip)[names(all_lip) == "c_lip_sm"] <- "c_lip"
+names(all_lip)[names(all_lip) == "dr_lip_sm"] <- "dr_lip"
+names(all_lip)[names(all_lip) == "hs_lip_sm"] <- "hs_lip"
+
+write.table(all_lip, "../processed_data/lip_sire_avg.txt", sep="\t")
+```
+
+```{r}
+test<-all_prot %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(all_prot$RIL, test)
+testy$RIL<-all_prot$RIL
+test_A<-testy[,-1]
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+sire_dam_sets<- cbind(sireid,damid)
+dat_prot_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_prot_sire$sireid <-as.factor(dat_prot_sire$sireid)
+dat_prot_sire$damid <-as.factor(dat_prot_sire$damid)
+
+c_prot<- dplyr::summarize(group_by(dat_prot_sire,sireid),c_prot_sm=mean(c_prot, na.rm = TRUE))#
+dr_prot<- dplyr::summarize(group_by(dat_prot_sire,sireid),dr_prot_sm=mean(dr_prot, na.rm = TRUE))#
+hs_prot<- dplyr::summarize(group_by(dat_prot_sire,sireid),hs_prot_sm=mean(hs_prot, na.rm = TRUE))#
+
+prot_<-left_join(c_prot, dr_prot, by="sireid")
+all_prot<-left_join(prot_, hs_prot, by="sireid")
+
+names(all_prot)[names(all_prot) == "c_prot_sm"] <- "c_prot"
+names(all_prot)[names(all_prot) == "dr_prot_sm"] <- "dr_prot"
+names(all_prot)[names(all_prot) == "hs_prot_sm"] <- "hs_prot"
+
+write.table(all_prot, "../processed_data/prot_sire_avg.txt", sep="\t")
+```
+
+```{r}
+test<-all_gly %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(all_gly$RIL, test)
+testy$RIL<-all_gly$RIL
+test_A<-testy[,-1]
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+sire_dam_sets<- cbind(sireid,damid)
+dat_gly_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_gly_sire$sireid <-as.factor(dat_gly_sire$sireid)
+dat_gly_sire$damid <-as.factor(dat_gly_sire$damid)
+
+c_gly<- dplyr::summarize(group_by(dat_gly_sire,sireid),c_gly_sm=mean(c_gly, na.rm = TRUE))#
+dr_gly<- dplyr::summarize(group_by(dat_gly_sire,sireid),dr_gly_sm=mean(dr_gly, na.rm = TRUE))#
+hs_gly<- dplyr::summarize(group_by(dat_gly_sire,sireid),hs_gly_sm=mean(hs_gly, na.rm = TRUE))#
+
+gly_<-left_join(c_gly, dr_gly, by="sireid")
+all_gly<-left_join(gly_, hs_gly, by="sireid")
+
+names(all_gly)[names(all_gly) == "c_gly_sm"] <- "c_gly"
+names(all_gly)[names(all_gly) == "dr_gly_sm"] <- "dr_gly"
+names(all_gly)[names(all_gly) == "hs_gly_sm"] <- "hs_gly"
+
+write.table(all_gly, "../processed_data/gly_sire_avg.txt", sep="\t")
+```
+
+
+```{r}
+#prot untransformed
+all_prot$c_prot_T<-(all_prot$c_prot) 
+all_prot$dr_prot_T<-(all_prot$dr_prot)
+all_prot$hs_prot_T<-(all_prot$hs_prot) 
+
+testing<-select(all_prot, sireid, c_prot_T, dr_prot_T, hs_prot_T)
+write.table(testing, "../processed_data/prot_transform_sire_avg.txt", sep="\t")
+
+
+#lip untransformed
+all_lip$c_lip_T<-(all_lip$c_lip) 
+all_lip$dr_lip_T<-(all_lip$dr_lip) 
+all_lip$hs_lip_T<-(all_lip$hs_lip) 
+
+testing<-select(all_lip, sireid, c_lip_T, dr_lip_T, hs_lip_T)
+write.table(testing, "../processed_data/lipid_transform_sire_avg.txt", sep="\t")
+
+#carb
+all_carb$c_carb_T<-log(all_carb$c_carb) 
+all_carb$dr_carb_T<-log(all_carb$dr_carb) 
+all_carb$hs_carb_T<-log(all_carb$hs_carb) 
+testing<-select(all_carb, sireid, c_carb_T, dr_carb_T, hs_carb_T)
+write.table(testing, "../processed_data/carbs_transform_sire_avg.txt", sep="\t")
+
+#glycogne: dr and c untransfomred, hs square root
+all_gly$c_gly_T<-(all_gly$c_gly) 
+all_gly$dr_gly_T<-(all_gly$dr_gly) 
+all_gly$hs_gly_T<-(all_gly$hs_gly^1/2) 
+
+test<-select(all_gly, sireid, c_gly_T, dr_gly_T, hs_gly_T)
+write.table(test, "../processed_data/glycogen_transform_sire_avg.txt", sep="\t")
+
+```
+
+
+#Carbohydrate
+**-DR: sq root
+-C: log
+-HS: untransformed**
+
+_Yes, it looks like there are outliers, these are samples that were paired w their technical replicate so not actually an "outlier"_
+```{r}
+#high sugar (log)
+p1a<-ggplot(data=all_carb, aes(x = (hs_carb))) +
+  geom_histogram(bins=20) 
+p1b<-ggplot(data=all_carb, aes(x = (hs_carb)^(1/2))) +
+  geom_histogram(bins=20) 
+p1c<-ggplot(data=all_carb, aes(x = log(hs_carb))) +
+  geom_histogram(bins=20) 
+p1d<-ggplot(data=all_carb, aes(x = (hs_carb)^(2))) +
+  geom_histogram(bins=20) 
+plot_grid(p1a,p1b,p1c,p1d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#control (log)
+p2a<-ggplot(data=all_carb, aes(x = (c_carb))) +
+  geom_histogram(bins=20)
+p2b<-ggplot(data=all_carb, aes(x = (c_carb)^(1/2))) +
+  geom_histogram(bins=20) 
+p2c<-ggplot(data=all_carb, aes(x = log(c_carb))) +
+  geom_histogram(bins=20)
+p2d<-ggplot(data=all_carb, aes(x = (c_carb)^(2))) +
+  geom_histogram(bins=20) 
+plot_grid(p2a,p2b,p2c,p2d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#dr (log)
+p3a<-ggplot(data=all_carb, aes(x = (dr_carb))) +
+  geom_histogram(bins=20) 
+p3b<-ggplot(data=all_carb, aes(x = (dr_carb)^(1/2))) +
+  geom_histogram(bins=20) 
+p3c<-ggplot(data=all_carb, aes(x = log(dr_carb))) +
+  geom_histogram(bins=20) 
+p3d<-ggplot(data=all_carb, aes(x = (dr_carb)^(2))) +
+  geom_histogram(bins=20) 
+plot_grid(p3a,p3b,p3c,p3d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#DR sq root and C log, HS is untransformed
+all_carb$c_carb_T<-log(all_carb$c_carb) 
+all_carb$dr_carb_T<-log(all_carb$dr_carb) 
+all_carb$hs_carb_T<-(all_carb$hs_carb) 
+testing<-select(all_carb, RIL, c_carb_T, dr_carb_T, hs_carb_T)
+write.table(testing, "../processed_data/carbs_transform.txt", sep="\t")
+
+```
+
+##GLYCOGEN
+**-hs: square root
+-c: square root
+-dr: square root**
+```{r glycogen}
+#HS (square root)
+p4a<-ggplot(data=all_gly, aes(x = (hs_gly))) +
+  geom_histogram(bins=30) 
+p4b<-ggplot(data=all_gly, aes(x = (hs_gly)^(1/2))) +
+  geom_histogram(bins=30) 
+p4c<-ggplot(data=all_gly, aes(x = log(hs_gly))) +
+  geom_histogram(bins=30) 
+p4d<-ggplot(data=all_gly, aes(x = (hs_gly)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p4a,p4b,p4c,p4d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#control (untransfomred)
+p5a<-ggplot(data=all_gly, aes(x = (c_gly))) +
+  geom_histogram(bins=30) 
+p5b<-ggplot(data=all_gly, aes(x = (c_gly)^(1/2))) +
+  geom_histogram(bins=30) 
+p5c<-ggplot(data=all_gly, aes(x =log(c_gly))) +
+  geom_histogram(bins=30) 
+p5d<-ggplot(data=all_gly, aes(x = (c_gly)^(2))) +
+  geom_histogram(bins=30)
+plot_grid(p5a,p5b,p5c,p5d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#DR is untransformed
+p6a<-ggplot(data=all_gly, aes(x = (dr_gly))) +
+  geom_histogram(bins=30) 
+p6b<-ggplot(data=all_gly, aes(x = (dr_gly)^(1/2))) +
+  geom_histogram(bins=30) 
+p6c<-ggplot(data=all_gly, aes(x =log(dr_gly))) +
+  geom_histogram(bins=30) 
+p6d<-ggplot(data=all_gly, aes(x = (dr_gly)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p6a,p6b,p6c,p6d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+
+all_gly$c_gly_T<-(all_gly$c_gly^1/2) 
+all_gly$dr_gly_T<-(all_gly$dr_gly^1/2) 
+all_gly$hs_gly_T<-(all_gly$hs_gly^1/2) 
+
+test<-select(all_gly, RIL, c_gly_T, dr_gly_T, hs_gly_T)
+write.table(test, "../processed_data/glycogen_transform.txt", sep="\t")
+```
+
+
+##PROTEIN
+**-hs: untransformed
+-c: (log most likely, possibly sq root)
+-dr: square root**
+```{r protien}
+#HS (untransfomred)
+p7a<-ggplot(data=all_prot, aes(x = (hs_prot))) +
+  geom_histogram(bins=30) 
+p7b<-ggplot(data=all_prot, aes(x = (hs_prot)^(1/2))) +
+  geom_histogram(bins=30) 
+p7c<-ggplot(data=all_prot, aes(x = log(hs_prot))) +
+  geom_histogram(bins=30) 
+p7d<-ggplot(data=all_prot, aes(x = (hs_prot)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p7a,p7b,p7c,p7d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#control (log most likely, possibly sq root)
+p8a<-ggplot(data=all_prot, aes(x = (c_prot))) +
+  geom_histogram(bins=30) 
+p8b<-ggplot(data=all_prot, aes(x = (c_prot)^(1/2))) +
+  geom_histogram(bins=30) 
+p8c<-ggplot(data=all_prot, aes(x = log(c_prot))) +
+  geom_histogram(bins=30) 
+p8d<-ggplot(data=all_prot, aes(x = (c_prot)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p8a,p8b,p8c,p8d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+#DR (square root)
+p9a<-ggplot(data=all_prot, aes(x = (dr_prot))) +
+  geom_histogram(bins=30) 
+p9b<-ggplot(data=all_prot, aes(x = (dr_prot)^(1/2))) +
+  geom_histogram(bins=30) 
+p9c<-ggplot(data=all_prot, aes(x = log(dr_prot))) +
+  geom_histogram(bins=30) 
+p9d<-ggplot(data=all_prot, aes(x = (dr_prot)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p9a,p9b,p9c,p9d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#hs: untransformed, Control,  (log most likely, possibly sq root); dr: square root
+
+all_prot$c_prot_T<-(all_prot$c_prot) 
+all_prot$dr_prot_T<-(all_prot$dr_prot)
+all_prot$hs_prot_T<-(all_prot$hs_prot) 
+
+testing<-select(all_prot, RIL, c_prot_T, dr_prot_T, hs_prot_T)
+write.table(testing, "../processed_data/prot_transform.txt", sep="\t")
+
+```
+
+##LIPID
+**-hs: untransformed 
+-c: square root
+-dr: untransformed**
+```{r lipid}
+#HS (untransformed)
+p10a<-ggplot(data=all_lip, aes(x = (hs_lip))) +
+  geom_histogram(bins=30) 
+p10b<-ggplot(data=all_lip, aes(x = (hs_lip)^(1/2))) +
+  geom_histogram(bins=30) 
+p10c<-ggplot(data=all_lip, aes(x = log(hs_lip))) +
+  geom_histogram(bins=30) 
+p10d<-ggplot(data=all_lip, aes(x = (hs_lip)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p10a,p10b,p10c,p10d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#control (square root)
+p11a<-ggplot(data=all_lip, aes(x = (c_lip))) +
+  geom_histogram(bins=30) 
+p11b<-ggplot(data=all_lip, aes(x = (c_lip)^(1/2))) +
+  geom_histogram(bins=30) 
+p11c<-ggplot(data=all_lip, aes(x = log(c_lip))) +
+  geom_histogram(bins=30) 
+p11d<-ggplot(data=all_lip, aes(x = (c_lip)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p11a,p11b,p11c,p11d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+#DR (untransformed)
+p12a<-ggplot(data=all_lip, aes(x = (dr_lip))) +
+  geom_histogram(bins=30) 
+p12b<-ggplot(data=all_lip, aes(x = (dr_lip)^(1/2))) +
+  geom_histogram(bins=30) 
+p12c<-ggplot(data=all_lip, aes(x = log(dr_lip))) +
+  geom_histogram(bins=30) 
+p12d<-ggplot(data=all_lip, aes(x = (dr_lip)^(2))) +
+  geom_histogram(bins=30) 
+plot_grid(p12a,p12b,p12c,p12d,
+          rows=2,
+          cols=2,
+          labels = c("a", "b", "c", "d"))
+
+all_lip$c_lip_T<-(all_lip$c_lip) 
+all_lip$dr_lip_T<-(all_lip$dr_lip) 
+all_lip$hs_lip_T<-(all_lip$hs_lip) 
+
+testing<-select(all_lip, RIL, c_lip_T, dr_lip_T, hs_lip_T)
+write.table(testing, "../processed_data/lipid_transform.txt", sep="\t")
+```
+
+**CARBOHYDRATE:** DR is log; C is log; HS is untransformed
+
+**LIPID:**  DR, C and HS untransformed;
+
+**GLYCOGEN:** DR, C and HS all square root
+
+**PROTEIN:** DR,C and HS is  untransformed
+
+####FIX THIS 
+#Complete transformations for each macromolec
+```{r, include=FALSE}
+carb_dr<-ggplot(data=all_carb, aes(x = (dr_carb)^(1/2))) +
+  geom_histogram(bins=30) + labs(x="square root", y="carbohydrate", title="dietary restriction")
+carb_c<-ggplot(data=all_carb, aes(x = log(c_carb))) +
+  geom_histogram(bins=30)+labs(x="log", title="control",y=" ")
+carb_hs<-ggplot(data=all_carb, aes(x = (hs_carb))) +
+  geom_histogram(bins=30)  +labs(x="untransformed", title="high sugar",y=" ")
+
+gly_dr<-ggplot(data=all_gly, aes(x = (dr_gly)^(1/2))) +
+  geom_histogram(bins=30) + labs (x="square root", y="glycogen")
+gly_c<-ggplot(data=all_gly, aes(x = (c_gly)^(1/2))) +
+  geom_histogram(bins=30) +labs(x="square root",y=" ")
+gly_hs<-ggplot(data=all_gly, aes(x = (hs_gly)^(1/2))) +
+  geom_histogram(bins=30) +labs(x="square root",y=" ")
+
+prot_dr<-ggplot(data=all_prot, aes(x = (dr_prot)^(1/2))) +
+  geom_histogram(bins=30) + labs (x="square root", y="protein", title = "dietary restriction")
+prot_c<-ggplot(data=all_prot, aes(x = log(c_prot))) +
+  geom_histogram(bins=30) + labs (x="log",y=" ", title = "control")
+prot_hs<-ggplot(data=all_prot, aes(x = (hs_prot))) +
+  geom_histogram(bins=30) + labs (x="untransformed",y=" ", title= "high sugar")
+
+lip_dr<-ggplot(data=all_lip, aes(x = (dr_lip))) +
+  geom_histogram(bins=30) + labs (x="untransformed", y="lipid")
+lip_c<-ggplot(data=all_lip, aes(x = (c_lip)^(1/2))) +
+  geom_histogram(bins=30) + labs (x="square root",y=" ")
+lip_hs<-ggplot(data=all_lip, aes(x = (hs_lip))) +
+  geom_histogram(bins=30) + labs (x="untransformed",y=" ")
+
+
+test_plot<-plot_grid(carb_dr,carb_c,carb_hs,gly_dr, gly_c,gly_hs,prot_dr,prot_c,prot_hs,lip_dr,lip_c,lip_hs,
+          rows=4,
+          cols=3)
+#saved as pdf file under plots. 
+```
+#untransformed
+```{r, include=FALSE}
+carb_dr_ut<-ggplot(data=all_carb, aes(x = (dr_carb))) +
+  geom_histogram(bins=30) + labs(x=" ", y="untransformed", title=" ")
+carb_c_ut<-ggplot(data=all_carb, aes(x = (c_carb))) +
+  geom_histogram(bins=30)+labs(x=" ", title=" ",y=" ")
+carb_hs_ut<-ggplot(data=all_carb, aes(x = (hs_carb))) +
+  geom_histogram(bins=30)  +labs(x=" ", title=" ",y=" ")
+
+gly_dr_ut<-ggplot(data=all_gly, aes(x = (dr_gly))) +
+  geom_histogram(bins=30) + labs (x=" ", y="untransformed")
+gly_c_ut<-ggplot(data=all_gly, aes(x = (c_gly))) +
+  geom_histogram(bins=30) +labs(x=" ",y=" ")
+gly_hs_ut<-ggplot(data=all_gly, aes(x = (hs_gly))) +
+  geom_histogram(bins=30) +labs(x=" ",y=" ")
+
+prot_dr_ut<-ggplot(data=all_prot, aes(x = (dr_prot))) +
+  geom_histogram(bins=30) + labs (x=" ", y="untransformed")
+prot_c_ut<-ggplot(data=all_prot, aes(x = (c_prot))) +
+  geom_histogram(bins=30) + labs (x=" ",y=" ")
+prot_hs_ut<-ggplot(data=all_prot, aes(x = (hs_prot))) +
+  geom_histogram(bins=30) + labs (x=" ",y=" ")
+
+lip_dr_ut<-ggplot(data=all_lip, aes(x = (dr_lip))) +
+  geom_histogram(bins=30) + labs (x=" ", y="untransformed")
+lip_c_ut<-ggplot(data=all_lip, aes(x = (c_lip))) +
+  geom_histogram(bins=30) + labs (x=" ",y=" ")
+lip_hs_ut<-ggplot(data=all_lip, aes(x = (hs_lip))) +
+  geom_histogram(bins=30) + labs (x=" ",y=" ")
+
+carb_gly_TandUT_plots<-plot_grid(carb_dr,carb_c,carb_hs,
+                     carb_dr_ut,carb_c_ut,carb_hs_ut,
+                     gly_dr, gly_c,gly_hs,
+                     gly_dr_ut, gly_c_ut,gly_hs_ut,
+          rows=4,
+          cols=3)
+#SAVE THIS
+
+prot_lip_TandUT_plots<-plot_grid(prot_dr,prot_c,prot_hs,
+                     prot_dr_ut,prot_c_ut,prot_hs_ut,
+                     lip_dr,lip_c,lip_hs,
+                     lip_dr_ut,lip_c_ut,lip_hs_ut,
+          rows=4,
+          cols=3)
+
+```

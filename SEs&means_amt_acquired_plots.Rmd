@@ -1,0 +1,165 @@
+---
+title: "SEs&means_amt_acquired_plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(cowplot)
+library(forcats)
+library(car)
+library(Hmisc)
+library(multcomp)
+stat_sum_df <- function(fun, geom="crossbar", ...) {
+  stat_summary(fun.data=fun, colour="red", geom=geom, width=0.2, ...)
+}
+```
+
+```{r}
+dat<-read.table("../processed_data/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+#standard error (SE) and means
+mean(dat$dr_carb, na.rm=TRUE)
+sd(dat$dr_carb, na.rm=TRUE)/sqrt(length(dat$dr_carb[!is.na(dat$dr_carb)]))#Std error
+
+mean(dat$c_carb, na.rm=TRUE)
+sd(dat$c_carb, na.rm=TRUE)/sqrt(length(dat$c_carb[!is.na(dat$c_carb)]))  #Standard error
+
+mean(dat$hs_carb, na.rm=TRUE)
+sd(dat$hs_carb, na.rm=TRUE)/sqrt(length(dat$hs_carb[!is.na(dat$hs_carb)]))  #Std error
+
+```
+
+
+```{r}
+dat<-read.table("../processed_data/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_lip, na.rm=TRUE)
+sd(dat$dr_lip, na.rm=TRUE)/sqrt(length(dat$dr_lip[!is.na(dat$dr_lip)]))#Std error
+
+mean(dat$c_lip, na.rm=TRUE)
+sd(dat$c_lip, na.rm=TRUE)/sqrt(length(dat$c_lip[!is.na(dat$c_lip)]))  #Standard error
+
+mean(dat$hs_lip, na.rm=TRUE)
+sd(dat$hs_lip, na.rm=TRUE)/sqrt(length(dat$hs_lip[!is.na(dat$hs_lip)]))  #Std error
+```
+
+
+```{r}
+dat<-read.table("../processed_data/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_prot, na.rm=TRUE)
+sd(dat$dr_prot, na.rm=TRUE)/sqrt(length(dat$dr_prot[!is.na(dat$dr_prot)]))#Std error
+
+mean(dat$c_prot, na.rm=TRUE)
+sd(dat$c_prot, na.rm=TRUE)/sqrt(length(dat$c_prot[!is.na(dat$c_prot)]))  #Standard error
+
+mean(dat$hs_prot, na.rm=TRUE)
+sd(dat$hs_prot, na.rm=TRUE)/sqrt(length(dat$hs_prot[!is.na(dat$hs_prot)]))  #Std error
+```
+
+```{r}
+dat<-read.table("../processed_data/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+mean(dat$dr_gly, na.rm=TRUE)
+sd(dat$dr_gly, na.rm=TRUE)/sqrt(length(dat$dr_gly[!is.na(dat$dr_gly)]))#Std error
+
+mean(dat$c_gly, na.rm=TRUE)
+sd(dat$c_gly, na.rm=TRUE)/sqrt(length(dat$c_gly[!is.na(dat$c_gly)]))  #Standard error
+
+mean(dat$hs_gly, na.rm=TRUE)
+sd(dat$hs_gly, na.rm=TRUE)/sqrt(length(dat$hs_gly[!is.na(dat$hs_gly)]))  #Std error
+```
+
+ #START HERE
+#ANOVA
+```{r}
+dat<-read.table("../processed_data/carbs_transform_sire_avg.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+#dat_pretransformed<-read.table("../processed_data/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+names(dat)[names(dat) == "sireid"] <- "RIL"
+names(dat)[names(dat) == "c_carb_T"] <- "c_carb"
+names(dat)[names(dat) == "dr_carb_T"] <- "dr_carb"
+names(dat)[names(dat) == "hs_carb_T"] <- "hs_carb"
+
+carbalt<-data.frame('value'=c(dat[,'dr_carb'],dat[,'c_carb'],dat[,'hs_carb']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+carbalt<- carbalt %>% mutate(treatment=fct_inorder(carbalt$treatment, ordered=NA))
+
+carblm<-lm(value~ treatment, data=carbalt)
+summary(carblm)
+anova(carblm)
+
+#post hoc testing:
+tukeyc <- glht(carblm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyc)
+plot(tukeyc)
+
+```
+#post_hoc <- glht(carblm,mcp(Treatment = c("hs - c == 0", "hs - dr == 0")))
+#summary(post_hoc)
+
+```{r}
+dat<-read.table("../processed_data/lipid_transform_sire_avg.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+names(dat)[names(dat) == "sireid"] <- "RIL"
+names(dat)[names(dat) == "c_lip_T"] <- "c_lip"
+names(dat)[names(dat) == "dr_lip_T"] <- "dr_lip"
+names(dat)[names(dat) == "hs_lip_T"] <- "hs_lip"
+
+lipalt<-data.frame('value'=c(dat[,'dr_lip'],dat[,'c_lip'],dat[,'hs_lip']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+lipalt<- lipalt%>% mutate(treatment=fct_inorder(lipalt$treatment, ordered=NA))
+
+liplm<-lm(value~ treatment, data=lipalt)
+summary(liplm)
+anova(liplm)
+
+tukeyl <- glht(liplm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyl)
+plot(tukeyl)
+```
+
+
+```{r}
+dat<-read.table("../processed_data/prot_transform_sire_avg.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+names(dat)[names(dat) == "sireid"] <- "RIL"
+names(dat)[names(dat) == "c_prot_T"] <- "c_prot"
+names(dat)[names(dat) == "dr_prot_T"] <- "dr_prot"
+names(dat)[names(dat) == "hs_prot_T"] <- "hs_prot"
+
+protalt<-data.frame('value'=c(dat[,'dr_prot'],dat[,'c_prot'],dat[,'hs_prot']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+protalt<- protalt%>% mutate(treatment=fct_inorder(protalt$treatment, ordered=NA))
+
+protlm<-lm(value~ treatment, data=protalt)
+summary(protlm)
+anova(protlm)
+tukeyp <- glht(protlm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyp)
+plot(tukeyp)
+```
+
+
+```{r}
+dat<-read.table("../processed_data/glycogen_transform_sire_avg.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+names(dat)[names(dat) == "sireid"] <- "RIL"
+names(dat)[names(dat) == "c_gly_T"] <- "c_gly"
+names(dat)[names(dat) == "dr_gly_T"] <- "dr_gly"
+names(dat)[names(dat) == "hs_gly_T"] <- "hs_gly"
+
+glyalt<-data.frame('value'=c(dat[,'dr_gly'],dat[,'c_gly'],dat[,'hs_gly']),'treatment'=rep(c('dr','c', 'hs'),each=nrow(dat)), 'RIL'=rep(c(dat[,'RIL'])))
+
+glyalt<- glyalt%>% mutate(treatment=fct_inorder(glyalt$treatment, ordered=NA))
+
+glylm<-lm(value~ treatment, data=glyalt)
+summary(glylm)
+anova(glylm)
+
+tukeyg<- glht(glylm, linfct = mcp(treatment = "Tukey"))
+summary(tukeyg)
+plot(tukeyg)
+```

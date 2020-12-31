@@ -1,0 +1,91 @@
+---
+title: "diff_bw_TX"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/HalfSib/scripts")
+```
+
+
+```{r cars}
+combined<- read.table("../processed_data/perfly_overall_dataset.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+combined$Well.ID<-combined$Line
+
+test<-combined %>% separate(Well.ID, c("DAM", "Treat", "rep"))
+testy<-cbind(combined$Well.ID, test)
+testy$Well.ID<-combined$Well.ID
+test_A<-testy[,-1]
+
+test_A$RIL <- paste(test_A$DAM,".",test_A$rep)
+AvgTab<-test_A
+
+
+a<-subset(AvgTab, Treat=="C")
+b<-subset(AvgTab, Treat=="DR")
+c<-subset(AvgTab, Treat=="HS")
+```
+
+
+```{r}
+aa<-a[,c('RIL','p_perfly')]
+bb<-b[,c('RIL','p_perfly')]
+cc<-c[,c('RIL','p_perfly')]
+
+all<-merge(aa,bb,by="RIL",all=T) #where "RIL" is dam and replicat (without Tx)
+all_prot<-merge(all,cc,by="RIL",all=T)
+colnames(all_prot)[2] <- "c_prot"
+colnames(all_prot)[3] <- "dr_prot"
+colnames(all_prot)[4] <- "hs_prot"
+
+###carb
+aa<-a[,c('RIL','c_perfly')]
+bb<-b[,c('RIL','c_perfly')]
+cc<-c[,c('RIL','c_perfly')]
+
+all<-merge(aa,bb,by="RIL",all=T)
+all_carb<-merge(all,cc,by="RIL",all=T)
+colnames(all_carb)[2] <- "c_carb"
+colnames(all_carb)[3] <- "dr_carb"
+colnames(all_carb)[4] <- "hs_carb"
+
+
+aa<-a[,c('RIL','g_perfly')]
+bb<-b[,c('RIL','g_perfly')]
+cc<-c[,c('RIL','g_perfly')]
+
+all<-merge(aa,bb,by="RIL",all=T)
+all_gly<-merge(all,cc,by="RIL",all=T)
+colnames(all_gly)[2] <- "c_gly"
+colnames(all_gly)[3] <- "dr_gly"
+colnames(all_gly)[4] <- "hs_gly"
+
+
+aa<-a[,c('RIL','l_perfly')]
+bb<-b[,c('RIL','l_perfly')]
+cc<-c[,c('RIL','l_perfly')]
+
+all<-merge(aa,bb,by="RIL",all=T)
+all_lip<-merge(all,cc,by="RIL",all=T)
+colnames(all_lip)[2] <- "c_lip"
+colnames(all_lip)[3] <- "dr_lip"
+colnames(all_lip)[4] <- "hs_lip"
+
+
+write.table(all_carb, "../processed_data/all_carb_tot.txt", sep="\t")
+write.table(all_gly, "../processed_data/all_gly_tot.txt", sep="\t")
+write.table(all_prot, "../processed_data/all_prot_tot.txt", sep="\t")
+write.table(all_lip, "../processed_data/all_lip_tot.txt", sep="\t")
+```
+
+

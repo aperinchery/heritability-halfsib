@@ -1,0 +1,289 @@
+---
+title: "total_acquisition"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+stat_sum_df <- function(fun, geom="crossbar", ...) {
+  stat_summary(fun.data=fun, colour="red", geom=geom, width=0.2, ...)
+}
+```
+
+
+
+```{r}
+prot<-read.table("../ProcessedData/all_prot_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+carb<-read.table("../ProcessedData/all_carb_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+gly<-read.table("../ProcessedData/all_gly_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/all_lip_tot.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+```
+
+
+###This is in kilocalorie!!!
+```{r}
+carb$c_carb_cal<-carb[,2]*1.6
+carb$dr_carb_cal<-carb[,3]*1.6
+carb$hs_carb_cal<-carb[,4]*1.6
+carb <- carb[ -c(5:7) ]
+
+
+lip$c_lip_cal<-lip[,2]*8
+lip$dr_lip_cal<-lip[,3]*8
+lip$hs_lip_cal<-lip[,4]*8
+lip <- lip[ -c(5:7) ]
+
+
+prot$c_prot_cal<-prot[,2]*3.9
+prot$dr_prot_cal<-prot[,3]*3.9
+prot$hs_prot_cal<-prot[,4]*3.9
+prot <- prot[ -c(5:7) ]
+
+
+gly$c_gly_cal<-gly[,2]*1.6
+gly$dr_gly_cal<-gly[,3]*1.6
+gly$hs_gly_cal<-gly[,4]*1.6
+gly <- gly[ -c(5:7) ]
+
+```
+
+```{r}
+write.table(prot, "../ProcessedData/untransformed_prot_cal.txt", sep="\t")
+write.table(carb, "../ProcessedData/untransformed_carb_cal.txt", sep="\t")
+write.table(gly, "../ProcessedData/untransformed_gly_cal.txt", sep="\t")
+write.table(lip, "../ProcessedData/untransformed_lip_cal.txt", sep="\t")
+```
+
+```{r}
+control<-cbind('RIL'=carb[,1],'carb_cal'=carb[,5],'lip_cal'=lip[,5],'prot_cal'=prot[,5],'gly_cal'= gly[,5])
+
+tot_acq<-cbind(rowSums(control[,-1], na.rm=TRUE))
+
+Control<-cbind('RIL'=control[,1],'carb_cal'=control[,2],'lip_cal'=control[,3],'prot_cal'=control[,4],'gly_cal'= control[,5], 'tot_acq'=tot_acq[,1] )
+
+
+dr<-cbind('RIL'=carb[,1],'carb_cal'=carb[,6],'lip_cal'=lip[,6],'prot_cal'=prot[,6],'gly_cal'= gly[,6])
+tot_acq<-cbind(rowSums(dr[,-1], na.rm=TRUE))
+DietRes<-cbind('RIL'=dr[,1],'carb_cal'=dr[,2],'lip_cal'=dr[,3],'prot_cal'=dr[,4],'gly_cal'= dr[,5], 'tot_acq'=tot_acq[,1] )
+
+
+hs<-cbind('RIL'=carb[,1],'carb_cal'=carb[,7],'lip_cal'=lip[,7],'prot_cal'=prot[,7],'gly_cal'= gly[,7])
+tot_acq<-cbind(rowSums(hs[,-1], na.rm=TRUE))
+
+HighSugar<-cbind('RIL'=hs[,1],'carb_cal'=hs[,2],'lip_cal'=hs[,3],'prot_cal'=hs[,4],'gly_cal'= hs[,5], 'tot_acq'=tot_acq[,1] )
+```
+
+
+```{r}
+write.table(Control, "../ProcessedData/Control_tot_acq.txt", sep="\t")
+write.table(DietRes, "../ProcessedData/DR_tot_acq.txt", sep="\t")
+write.table(HighSugar, "../ProcessedData/HS_tot_acq.txt", sep="\t")
+
+```
+
+#total acquisition plots
+```{r}
+HS_data<-read.table("../ProcessedData/HS_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+HS_data_woNA<- na.omit(HS_data) 
+HS_dat<-select(HS_data_woNA, RIL, tot_acq)
+HS_dat$treat <- 'HS'
+#important thing to keep in mind. if Lip value is NA tot acq will be very close to 0. Should remove Tot_acq values if tehre are any contributing macromolecules that are NA.
+
+DR_data<-read.table("../ProcessedData/DR_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+DR_data_woNA<- na.omit(DR_data) 
+DR_dat<-select(DR_data_woNA, RIL, tot_acq)
+DR_dat$treat <- 'DR'
+
+C_data<-read.table("../ProcessedData/Control_tot_acq.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+C_data_woNA<- na.omit(C_data) 
+C_dat<-select(C_data_woNA, RIL, tot_acq)
+C_dat$treat<- 'C'
+
+test_woNA<-bind_rows(C_dat, DR_dat)
+tot_acquisition_woNA<-bind_rows(test_woNA, HS_dat)
+colnames(tot_acquisition_woNA)[colnames(tot_acquisition_woNA)=="treat"] <- "treatment"
+
+p_totacq<-ggplot(data=tot_acquisition_woNA, aes(x = treatment, y=tot_acq, color=as.factor(RIL))) +
+  geom_point()+
+   geom_line(aes(group = paste(as.factor(RIL)), alpha = 0.2))+
+  theme(legend.position="none")+
+  ylab("calories")+
+  labs(title="Total Acquisition")+
+  stat_summary(fun.y = mean, geom = "point", size = 2, color = "black")+
+  stat_sum_df("mean_cl_normal",geom="errorbar")+
+  scale_x_discrete(limits=c("DR", "C", "HS"))
+p_totacq
+
+tot_acquisition_zerRM<-filter(tot_acquisition_woNA, tot_acq > 0.000000) #nothing at zero :)
+```
+
+#to do for  Total Acquisition Plots YOU CAN DO IT
+----if not all values possible for tot_acq., make =tot_acq: NA
+----error bars for amount acquired plot
+----plot grid
+
+```{r}
+library(forcats)
+
+HS_tot_acq<-ggplot(HS_dat, aes(reorder(RIL,tot_acq), tot_acq)) +
+  geom_bar(stat= "identity", width=1)+
+  theme(legend.position="none")+
+  ylab("calories")+
+  xlab("RIX")+
+  labs(title="Total Acquisition on HS")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+HS_tot_acq
+
+DR_tot_acq<-ggplot(data=DR_dat, aes(reorder(RIL,tot_acq), y=tot_acq)) +
+  geom_bar(stat= "identity", width=1)+
+  theme(legend.position="none")+
+  ylab("calories")+
+  xlab("RIX")+
+  labs(title="Total Acquisition on DR")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+DR_tot_acq
+
+C_tot_acq<-ggplot(data=C_dat, aes(reorder(RIL,tot_acq), y=tot_acq)) +
+  geom_bar(stat= "identity", width=1)+
+  theme(legend.position="none")+
+  ylab("calories")+
+  xlab("RIX")+
+  labs(title="Total Acquisition on C")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+C_tot_acq
+```
+
+#Combined total acqusition plots
+```{r}
+combined_TotAcq<-plot_grid(HS_tot_acq, DR_tot_acq, C_tot_acq,p_totacq)
+combined_TotAcq
+ggsave(combined_TotAcq, file='combined_TotAcq.pdf',width=8, height=4)
+
+```
+
+#The following data has been transformed in order to run statistical tests
+```{r}
+###transformed
+gly<-read.table("../ProcessedData/glycogen_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+carb<-read.table("../ProcessedData/carbs_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+lip<-read.table("../ProcessedData/lipid_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+prot<-read.table("../ProcessedData/prot_transform.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+carb$c_carb_cal<-carb[,2]*1.6
+carb$dr_carb_cal<-carb[,3]*1.6
+carb$hs_carb_cal<-carb[,4]*1.6
+carb <- carb[ -c(2:4) ]
+
+
+lip$c_lip_cal<-lip[,2]*8
+lip$dr_lip_cal<-lip[,3]*8
+lip$hs_lip_cal<-lip[,4]*8
+lip <- lip[ -c(2:4) ]
+
+
+prot$c_prot_cal<-prot[,2]*3.9
+prot$dr_prot_cal<-prot[,3]*3.9
+prot$hs_prot_cal<-prot[,4]*3.9
+prot <- prot[ -c(2:4) ]
+
+
+gly$c_gly_cal<-gly[,2]*1.6
+gly$dr_gly_cal<-gly[,3]*1.6
+gly$hs_gly_cal<-gly[,4]*1.6
+gly <- gly[ -c(2:4) ]
+
+control<-cbind('RIL'=carb[,1],'carb_cal'=carb[,2],'lip_cal'=lip[,2],'prot_cal'=prot[,2],'gly_cal'= gly[,2])
+
+tot_acq<-cbind(rowSums(control[,-1], na.rm=TRUE))
+
+Control<-cbind('RIL'=control[,1],'carb_cal'=control[,2],'lip_cal'=control[,3],'prot_cal'=control[,4],'gly_cal'= control[,5], 'tot_acq'=tot_acq[,1] )
+
+
+dr<-cbind('RIL'=carb[,1],'carb_cal'=carb[,3],'lip_cal'=lip[,3],'prot_cal'=prot[,3],'gly_cal'= gly[,3])
+tot_acq<-cbind(rowSums(dr[,-1], na.rm=TRUE))
+DietRes<-cbind('RIL'=dr[,1],'carb_cal'=dr[,2],'lip_cal'=dr[,3],'prot_cal'=dr[,4],'gly_cal'= dr[,5], 'tot_acq'=tot_acq[,1] )
+
+
+hs<-cbind('RIL'=carb[,1],'carb_cal'=carb[,4],'lip_cal'=lip[,4],'prot_cal'=prot[,4],'gly_cal'= gly[,4])
+tot_acq<-cbind(rowSums(hs[,-1], na.rm=TRUE))
+
+HighSugar<-cbind('RIL'=hs[,1],'carb_cal'=hs[,2],'lip_cal'=hs[,3],'prot_cal'=hs[,4],'gly_cal'= hs[,5], 'tot_acq'=tot_acq[,1] )
+```
+
+
+```{r}
+write.table(Control, "../ProcessedData/Control_tot_acq_transformed.txt", sep="\t")
+write.table(DietRes, "../ProcessedData/DR_tot_acq_transformed.txt", sep="\t")
+write.table(HighSugar, "../ProcessedData/HS_tot_acq_transformed.txt", sep="\t")
+```
+HS_dat<-select(HS_data, RIL, tot_acq)
+HS_dat$treat <- 'HS'
+total_acq_PCA <- prcomp(~ RIL + tot_acq, data = tot_acquisition, center = TRUE, scale. = TRUE)
+```{r}
+HS_data<-read.table("../ProcessedData/HS_tot_acq_transformed.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+HS_data$treatment <- 'HS'
+
+DR_data<-read.table("../ProcessedData/DR_tot_acq_transformed.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+DR_data$treatment <- 'DR'
+
+C_data<-read.table("../ProcessedData/Control_tot_acq_transformed.txt", sep="\t",header=TRUE,stringsAsFactors=FALSE)
+C_data$treatment <- 'C'
+
+test<-bind_rows(HS_data, DR_data)
+tot_acquisition<-bind_rows(test, C_data)
+#colnames(tot_acquisition)[colnames(tot_acquisition)=="treat"] <- "treatment"
+tot_acquisition_woNA<- na.omit(tot_acquisition) 
+
+total_acq_PCA <- prcomp(~  carb_cal + lip_cal + prot_cal + gly_cal, data = tot_acquisition, center = TRUE, scale. = TRUE)
+#add column to 
+summary(total_acq_PCA)
+print(total_acq_PCA)
+write.table(total_acq_PCA, "../ProcessedData/total_acq_PCA.txt", sep="\t")
+#remove NAs from tot_acquisition
+PC <- data.frame(pc1 = total_acq_PCA$x[, 1],
+                 pc2 = total_acq_PCA$x[, 2],
+                 pc3 = total_acq_PCA$x[, 3],
+                 pc4 = total_acq_PCA$x[, 4])
+
+newTest<-data.frame(treat= tot_acquisition_woNA$treatment)
+
+totTEST<- bind_cols(PC, newTest)
+
+pc_plot <- ggplot(totTEST, aes(pc1, pc2, color=treat)) +
+  geom_vline(xintercept = 0, color = "red", size = 1.5) +
+  geom_hline(yintercept = 0, color = "red", size = 1.5) +
+  geom_point() +
+  coord_fixed()+
+  labs(title="Total Acquisition PCA plot")
+print(pc_plot)
+ggsave(pc_plot, file='overall_pc_plot.pdf',width=8, height=4)
+
+biplot(total_acq_PCA)
+```
+HS_dat<-dplyr::select(HS_data, RIL, tot_acq)
+#from quant_stats
+
+z <- prcomp(~ Fat + Lactose, data = M, center = TRUE, scale. = TRUE)
+PC <- data.frame(pc1 = z$x[, 1],
+                 pc2 = z$x[, 2])
+
+minpt <- data.frame(x1 = PC$pc1[themin], x2 = PC$pc2[themin])
+maxpt <- data.frame(x1 = PC$pc1[themax], x2 = PC$pc2[themax])
+
+pc_plot <- ggplot(PC, aes(pc1, pc2)) +
+  geom_vline(xintercept = 0, color = "red", size = 1.5) +
+  geom_hline(yintercept = 0, color = "red", size = 1.5) +
+  geom_point() +
+  geom_point(data = minpt, aes(x1, x2), col = "green", size = 3) +
+  geom_point(data = maxpt, aes(x1, x2), col = "blue", size = 3) +
+  coord_fixed()
+print(pc_plot)

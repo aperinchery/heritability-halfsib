@@ -1,0 +1,189 @@
+---
+title: "format_pedigree"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(cowplot)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(plyr)
+library(forcats)
+setwd("C:/Users/Anna/Dropbox/AMP_EGK/Projects/HalfSib/scripts")
+```
+
+```{r}
+#post outlier removal
+dat_gly_old<-read.table("../processed_data/glycogen_transform.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+control<-select(dat_gly_old, c_gly_T, RIL )
+dr<-select(dat_gly_old, dr_gly_T, RIL )
+hs<-select(dat_gly_old, hs_gly_T, RIL )
+
+control$Treat<-"C"
+dr$Treat<-"DR"
+hs$Treat<-"HS"
+
+names(control)[names(control) == "c_gly_T"] <- "amt_gly"
+names(dr)[names(dr) == "dr_gly_T"] <- "amt_gly"
+names(hs)[names(hs) == "hs_gly_T"] <- "amt_gly"
+
+
+dat_gly<-bind_rows(control, dr,hs)
+```
+
+```{r}
+dat_gly$treat <- as.factor(dat_gly$Treat)
+dat_gly$Treat <- NULL
+
+
+test<-dat_gly %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(dat_gly$RIL, test)
+testy$RIL<-dat_gly$RIL
+test_A<-testy[,-1]
+
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+
+sire_dam_sets<- cbind(sireid,damid)
+dat_gly_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_gly_sire$sireid <-as.factor(dat_gly_sire$sireid)
+dat_gly_sire$damid <-as.factor(dat_gly_sire$damid)
+
+dat_gly_addsir<-dat_gly_sire
+write.table(dat_gly_addsir, "../processed_data/glydat_formatted.txt", sep="\t")
+
+```
+
+
+
+```{r}
+#post outlier removal
+dat_lip_old<-read.table("../processed_data/lipid_transform.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+control<-select(dat_lip_old, c_lip_T, RIL )
+dr<-select(dat_lip_old, dr_lip_T, RIL )
+hs<-select(dat_lip_old, hs_lip_T, RIL )
+
+control$Treat<-"C"
+dr$Treat<-"DR"
+hs$Treat<-"HS"
+
+names(control)[names(control) == "c_lip_T"] <- "amt_lip"
+names(dr)[names(dr) == "dr_lip_T"] <- "amt_lip"
+names(hs)[names(hs) == "hs_lip_T"] <- "amt_lip"
+
+
+dat_lip<-bind_rows(control, dr,hs)
+```
+
+```{r}
+dat_lip$treat <- as.factor(dat_lip$Treat)
+dat_lip$Treat <- NULL
+
+
+test<-dat_lip %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(dat_lip$RIL, test)
+testy$RIL<-dat_lip$RIL
+test_A<-testy[,-1]
+
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+
+sire_dam_sets<- cbind(sireid,damid)
+dat_lip_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_lip_sire$sireid <-as.factor(dat_lip_sire$sireid)
+dat_lip_sire$damid <-as.factor(dat_lip_sire$damid)
+
+dat_lip_addsir<-dat_lip_sire
+write.table(dat_lip_addsir, "../processed_data/lipdat_formatted.txt", sep="\t")
+```
+
+
+```{r}
+#post outlier removal
+dat_prot_old<-read.table("../processed_data/prot_transform.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+control<-select(dat_prot_old, c_prot_T, RIL )
+dr<-select(dat_prot_old, dr_prot_T, RIL )
+hs<-select(dat_prot_old, hs_prot_T, RIL )
+
+control$Treat<-"C"
+dr$Treat<-"DR"
+hs$Treat<-"HS"
+
+names(control)[names(control) == "c_prot_T"] <- "amt_prot"
+names(dr)[names(dr) == "dr_prot_T"] <- "amt_prot"
+names(hs)[names(hs) == "hs_prot_T"] <- "amt_prot"
+
+dat_prot<-bind_rows(control, dr,hs)
+```
+
+```{r}
+dat_prot$treat <- as.factor(dat_prot$Treat)
+dat_prot$Treat <- NULL
+
+
+test<-dat_prot %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(dat_prot$RIL, test)
+testy$RIL<-dat_prot$RIL
+test_A<-testy[,-1]
+
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+
+sire_dam_sets<- cbind(sireid,damid)
+dat_prot_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_prot_sire$sireid <-as.factor(dat_prot_sire$sireid)
+dat_prot_sire$damid <-as.factor(dat_prot_sire$damid)
+
+dat_prot_addsir<-dat_prot_sire
+write.table(dat_prot_addsir, "../processed_data/protdat_formatted.txt", sep="\t")
+```
+
+
+```{r}
+#post outlier removal
+dat_carb_old<-read.table("../processed_data/carbs_transform.txt",sep="\t",header=TRUE,stringsAsFactors=FALSE)
+
+control<-select(dat_carb_old, c_carb_T, RIL )
+dr<-select(dat_carb_old, dr_carb_T, RIL )
+hs<-select(dat_carb_old, hs_carb_T, RIL )
+
+control$Treat<-"C"
+dr$Treat<-"DR"
+hs$Treat<-"HS"
+
+names(control)[names(control) == "c_carb_T"] <- "amt_carb"
+names(dr)[names(dr) == "dr_carb_T"] <- "amt_carb"
+names(hs)[names(hs) == "hs_carb_T"] <- "amt_carb"
+
+
+dat_carb<-bind_rows(control, dr,hs)
+```
+
+```{r}
+dat_carb$treat <- as.factor(dat_carb$Treat)
+dat_carb$Treat <- NULL
+
+test<-dat_carb %>% separate(RIL, c("damid", "rep"))
+testy<-cbind(dat_carb$RIL, test)
+testy$RIL<-dat_carb$RIL
+test_A<-testy[,-1]
+
+sireid<-rep(1:72, each=3)
+damid<-c(1:216)
+
+sire_dam_sets<- cbind(sireid,damid)
+dat_carb_sire <- merge(test_A,sire_dam_sets,by="damid")
+dat_carb_sire$sireid <-as.factor(dat_carb_sire$sireid)
+dat_carb_sire$damid <-as.factor(dat_carb_sire$damid)
+
+dat_carb_addsir<-dat_carb_sire
+write.table(dat_carb_addsir, "../processed_data/carbdat_formatted.txt", sep="\t")
+```
